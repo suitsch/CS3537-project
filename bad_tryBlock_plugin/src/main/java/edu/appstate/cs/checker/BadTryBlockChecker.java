@@ -65,13 +65,13 @@ public class BadTryBlockChecker extends BugChecker implements
 
         for (CatchTree catchTree : catches) {
             String typeStr = getCatchType(catchTree, state).toString();
-            if (typeStr.equals("java.lang.Exception")) {
+            if (typeStr.equals("java.lang.Exception") && catches.size() == 1) {
                  descriptions.add(
                     buildDescription(catchTree)
                     .setMessage("Must use a more specific exception type than Exception")
                     .build()
              );
-            } else if (typeStr.equals("java.lang.Throwable")) {
+            } else if (typeStr.equals("java.lang.Throwable") && catches.size() == 1) {
                 descriptions.add(
                     buildDescription(catchTree)
                         .setMessage("Must use a more specific exception type than Throwable")
