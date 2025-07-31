@@ -5,8 +5,7 @@ public class BadTryBlock {
         try {
             // Some code that might throw an exception
             throw new ArithmeticException("Division by zero");
-        } catch (Exception e) {
-            System.out.println("Caught Exception: " + e.getMessage());
+        } catch (Throwable e) {
         } finally {
             System.out.println("Finally block executed.");
         }

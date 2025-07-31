@@ -12,6 +12,10 @@ import javax.lang.model.type.TypeMirror;
 import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.source.tree.CatchTree;
+import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.TryTree;
+import com.sun.source.tree.BlockTree;
 import java.util.List;
 
 import static com.google.errorprone.BugPattern.SeverityLevel.WARNING;
@@ -30,7 +34,11 @@ public class BadTryBlockChecker extends BugChecker implements
         if (methodTree.getBody() != null) {
             for (StatementTree statement : methodTree.getBody().getStatements()) {
                 if (statement instanceof TryTree tryTree) {
-                    Description result = checkCatchOrder(tryTree.getCatches(), state);
+                    Description result = checkCatches(tryTree, state);
+                    if (result != Description.NO_MATCH) {
+                        return result;
+                    }
+                    result = checkCatchBlocks(tryTree);
                     if (result != Description.NO_MATCH) {
                         return result;
                     }
@@ -40,39 +48,43 @@ public class BadTryBlockChecker extends BugChecker implements
         return Description.NO_MATCH;
     }
 
-    private Description checkCatchOrder(List<? extends CatchTree> catches, VisitorState state) {
+    private Description checkCatches(TryTree tryTree, VisitorState state) {
+
+        List<? extends CatchTree> catches = tryTree.getCatches();
         Types types = state.getTypes();
 
+        if (catches.isEmpty()) {
+        return buildDescription(tryTree)
+                .setMessage("Try block must have at least one catch clause")
+                .build();
+        }
 
-        if (catches.size() == 1) {
-            if (getCatchType(catches.get(0), state).toString().equals("java.lang.Exception")) {
+        if (catches.size() == 1 && getCatchType(catches.get(0), state).toString().equals("java.lang.Exception")) {
                 return buildDescription(catches.get(0))
                         .setMessage("Must use a more specific exception type than Exception")
                         .build();
-            }
-            return Description.NO_MATCH; 
         }
 
-        for (int i = 0; i < catches.size(); i++) {
-            CatchTree earlier = catches.get(i);
-            Type earlierType = getCatchType(earlier, state);
-
-            for (int j = i + 1; j < catches.size(); j++) {
-                CatchTree later = catches.get(j);
-                Type laterType = getCatchType(later, state);
-
-                // laterType is assignable to earlierType = more specific caught after more general = error
-                if (types.isAssignable( laterType, earlierType)) {
-                    return buildDescription(later)
-                            .setMessage("Catch block for more specific exception (" + laterType + ") appears after general one (" + earlierType + ")")
-                            .build();
-                }
-            }
+        if (catches.size() == 1 && getCatchType(catches.get(0), state).toString().equals("java.lang.Throwable")) {
+                return buildDescription(catches.get(0))
+                        .setMessage("Must use a more specific exception type than Throwable")
+                        .build();
         }
 
         return Description.NO_MATCH;
     }
 
+    private Description checkCatchBlocks(TryTree tryTree) {
+        for (CatchTree catchTree : tryTree.getCatches()) {
+            BlockTree catchBlock = catchTree.getBlock();
+            if (catchBlock.getStatements().isEmpty()) {
+                return buildDescription(catchTree)
+                    .setMessage("Catch block must have at least one statement.")
+                    .build();
+            }
+        }
+        return Description.NO_MATCH;
+    }
     private Type getCatchType(CatchTree catchTree, VisitorState state) {
         return (Type) ((JCTree.JCVariableDecl) catchTree.getParameter()).sym.type;
     }
