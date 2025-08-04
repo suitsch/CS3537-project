@@ -39,7 +39,7 @@ public class BadTryBlockChecker extends BugChecker implements
                 if (statement instanceof TryTree tryTree) {
                     List<Description> catchDescriptions = checkCatches(tryTree, state);
                     descriptions.addAll(catchDescriptions);
-                    checkCatchBlocks(tryTree, state, descriptions);
+                    checkCatchBlocks(tryTree, descriptions);
                 }
             }
         }
@@ -64,7 +64,7 @@ public class BadTryBlockChecker extends BugChecker implements
         }
 
         for (CatchTree catchTree : catches) {
-            String typeStr = getCatchType(catchTree, state).toString();
+            String typeStr = getCatchType(catchTree).toString();
             if (typeStr.equals("java.lang.Exception") && catches.size() == 1) {
                  descriptions.add(
                     buildDescription(catchTree)
@@ -83,7 +83,7 @@ public class BadTryBlockChecker extends BugChecker implements
         return descriptions;
     }
 
-    private void checkCatchBlocks(TryTree tryTree, VisitorState state, List<Description> descriptions) {
+    private void checkCatchBlocks(TryTree tryTree, List<Description> descriptions) {
         for (CatchTree catchTree : tryTree.getCatches()) {
             BlockTree catchBlock = catchTree.getBlock();
             if (catchBlock.getStatements().isEmpty()) {
@@ -95,7 +95,7 @@ public class BadTryBlockChecker extends BugChecker implements
             }
         }
     }
-    private Type getCatchType(CatchTree catchTree, VisitorState state) {
+    private Type getCatchType(CatchTree catchTree) {
         return (Type) ((JCTree.JCVariableDecl) catchTree.getParameter()).sym.type;
     }
 }
